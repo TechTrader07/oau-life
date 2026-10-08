@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OAU LIFE - Campus Life Simulator</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    .game-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .map-section {
+      flex: 1;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-right: 3px solid #ff6b6b;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .map-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: white;
+    }
+
+    .location-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .location-card {
+      background: rgba(26, 26, 46, 0.8);
+      border: 2px solid #ff6b6b;
+      padding: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .location-card:hover {
+      background: #667eea;
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(255, 107, 107, 0.5);
+    }
+
+    .location-name {
+      font-weight: bold;
+      color: #ff6b6b;
+      margin-bottom: 5px;
+    }
+
+    .phone-section {
+      width: 400px;
+      background: #0a0e27;
+      display: flex;
+      flex-direction: column;
+      border-left: 3px solid #ff6b6b;
+      overflow: hidden;
+    }
+
+    .phone-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 15px;
+      text-align: center;
+      border-bottom: 2px solid #ff6b6b;
+    }
+
+    .phone-header h2 {
+      font-size: 18px;
+      margin-bottom: 5px;
+    }
+
+    .status-bar {
+      font-size: 12px;
+      color: #ddd;
+      margin: 5px 0;
+    }
+
+    .phone-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .app-tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .app-tab {
+      background: #1a1a2e;
+      border: 2px solid #667eea;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.3s;
+    }
+
+    .app-tab.active {
+      background: #667eea;
+      border-color: #ff6b6b;
+    }
+
+    .app-tab:hover {
+      transform: scale(1.05);
+    }
+
+    .app-content {
+      display: none;
+    }
+
+    .app-content.active {
+      display: block;
+    }
+
+    .dashboard {
+      background: #1a1a2e;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border-left: 4px solid #ff6b6b;
+    }
+
+    .dashboard h3 {
+      color: #667eea;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+
+    .stat-label {
+      color: #aaa;
+    }
+
+    .stat-value {
+      color: #4ecca3;
+      font-weight: bold;
+    }
+
+    .money-value {
+      color: #ffd700;
+    }
+
+    .nepo-badge {
+      background: #ff6b6b;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      display: inline-block;
+      margin-top: 5px;
+    }
+
+    .action-button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 8px 0;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 12px;
+      transition: all 0.3s;
+    }
+
+    .action-button:hover {
+      background: #764ba2;
+      transform: translateY(-2px);
+    }
+
+    .job-button {
+      background: #1a1a2e;
+      border: 1px solid #667eea;
+      color: #667eea;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      width: 100%;
+      transition: all 0.3s;
+    }
+
+    .job-button:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .message-box {
+      background: #1a1a2e;
+      border-left: 3px solid #667eea;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .message-from {
+      color: #ff6b6b;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    .input-group {
+      margin: 10px 0;
+    }
+
+    .input-group input,
+    .input-group textarea,
+    .input-group select {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #667eea;
+      background: #1a1a2e;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .input-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .time-display {
+      background: #1a1a2e;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #ffd700;
+      font-weight: bold;
+    }
+
+    .character-creation {
+      background: #1a1a2e;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .character-creation h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+    }
+
+    .error-message {
+      background: #ff6b6b;
+      color: white;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .success-message {
+      background: #4ecca3;
+      color: white;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .scroll-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .scroll-container::-webkit-scrollbar-track {
+      background: #1a1a2e;
+    }
+
+    .scroll-container::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 3px;
+    }
+
+    .online-players {
+      background: #1a1a2e;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border-left: 3px solid #4ecca3;
+    }
+
+    .online-player {
+      font-size: 12px;
+      color: #4ecca3;
+      margin: 5px 0;
+      padding: 3px 0;
+    }
+
+    .divider {
+      height: 1px;
+      background: #667eea;
+      margin: 15px 0;
+      opacity: 0.5;
+    }
+
+    .google-signin {
+      display: flex;
+      justify-content: center;
+      margin: 15px 0;
+    }
+
+    #g_id_onload {
+      display: flex;
+      justify-content: center;
+    }
+
+    .login-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .login-tab {
+      flex: 1;
+      background: #1a1a2e;
+      border: 2px solid #667eea;
+      color: #fff;
+      padding: 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .login-tab.active {
+      background: #667eea;
+      border-color: #ff6b6b;
+    }
+
+    .login-section {
+      display: none;
+    }
+
+    .login-section.active {
+      display: block;
+    }
+
+    .relationship-card {
+      background: #1a1a2e;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border-left: 3px solid #4ecca3;
+    }
+
+    .relationship-name {
+      color: #4ecca3;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="map-section scroll-container">
+      <div class="map-title">🗺️ OAU Campus</div>
+      <div class="location-grid" id="locationGrid"></div>
+    </div>
+
+    <div class="phone-section">
+      <div class="phone-header">
+        <h2>📱 OAU LIFE</h2>
+        <div class="status-bar">
+          <span id="playerName">Loading...</span>
+        </div>
+        <div class="time-display">
+          <span id="gameTime">08:00</span>
+          <div style="font-size: 11px; color: #667eea; margin-top: 5px;" id="dayDisplay">Monday</div>
+        </div>
+      </div>
+
+      <div class="app-tabs" id="appTabs" style="display: none;">
+        <button class="app-tab active" onclick="switchApp('dashboard')">📊 Dashboard</button>
+        <button class="app-tab" onclick="switchApp('portal')">🏫 Portal</button>
+        <button class="app-tab" onclick="switchApp('messages')">💬 Messages</button>
+        <button class="app-tab" onclick="switchApp('banking')">💰 Banking</button>
+        <button class="app-tab" onclick="switchApp('jobs')">💼 Jobs</button>
+        <button class="app-tab" onclick="switchApp('relationships')">💑 Relationships</button>
+      </div>
+
+      <div class="phone-body scroll-container">
+        <div id="message" style="display:none;"></div>
+
+        <!-- Character Creation -->
+        <div id="charCreation" class="app-content active">
+          <div class="character-creation">
+            <h2>🎮 Create Your Character</h2>
+
+            <div class="login-tabs">
+              <button class="login-tab active" onclick="switchLoginMethod('manual')">Manual</button>
+              <button class="login-tab" onclick="switchLoginMethod('google')">Google</button>
+            </div>
+
+            <!-- Manual Registration -->
+            <div id="manualLogin" class="login-section active">
+              <div class="input-group">
+                <label>Username:</label>
+                <input type="text" id="username" placeholder="Your name">
+              </div>
+              <div class="input-group">
+                <label>Gender:</label>
+                <select id="gender">
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <button class="action-button" onclick="createCharacter()">Create Character</button>
+            </div>
+
+            <!-- Google Sign-In -->
+            <div id="googleLogin" class="login-section">
+              <p style="color: #aaa; margin-bottom: 15px; font-size: 12px;">Sign in with your Google account to instantly create your character!</p>
+              <div class="google-signin" id="googleSigninContainer"></div>
+              <p style="color: #888; font-size: 11px; margin-top: 10px;">Your Google account will be linked to your OAU LIFE profile</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="app-content">
+          <div class="dashboard">
+            <h3>👤 Profile</h3>
+            <div class="stat-row">
+              <span class="stat-label">Name:</span>
+              <span class="stat-value" id="dashUsername">-</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Level:</span>
+              <span class="stat-value" id="dashLevel">100</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Hostel:</span>
+              <span class="stat-value" id="dashHostel">-</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Money:</span>
+              <span class="stat-value money-value" id="dashMoney">₦0</span>
+            </div>
+            <div id="nepoBadge"></div>
+          </div>
+
+          <div class="dashboard">
+            <h3>📈 Academic</h3>
+            <div class="stat-row">
+              <span class="stat-label">CGPA:</span>
+              <span class="stat-value" id="dashCGPA">5.0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Classes Attended:</span>
+              <span class="stat-value" id="dashClasses">0</span>
+            </div>
+          </div>
+
+          <div class="dashboard">
+            <h3>👥 Online Players</h3>
+            <div id="onlinePlayers"></div>
+          </div>
+        </div>
+
+        <!-- School Portal -->
+        <div id="portal" class="app-content">
+          <div class="dashboard">
+            <h3>🏫 School Portal</h3>
+            <div class="stat-row">
+              <span class="stat-label">Level:</span>
+              <span class="stat-value" id="portalLevel">100</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">CGPA:</span>
+              <span class="stat-value" id="portalCGPA">5.0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Hostel:</span>
+              <span class="stat-value" id="portalHostel">-</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Classes Attended:</span>
+              <span class="stat-value" id="portalClasses">0</span>
+            </div>
+            <button class="action-button" onclick="attendClass()">📚 Attend Class (2 hrs)</button>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages" class="app-content">
+          <div class="input-group">
+            <label>Send Message To:</label>
+            <input type="text" id="msgTo" placeholder="Username">
+            <textarea id="msgContent" placeholder="Your message..."></textarea>
+            <button class="action-button" onclick="sendMessage()">Send 📨</button>
+          </div>
+
+          <div class="dashboard">
+            <h3>📬 Messages</h3>
+            <div id="messagesList"></div>
+          </div>
+        </div>
+
+        <!-- Banking -->
+        <div id="banking" class="app-content">
+          <div class="dashboard">
+            <h3>💳 Account Balance</h3>
+            <div class="stat-row">
+              <span class="stat-label">Balance:</span>
+              <span class="stat-value money-value" id="bankBalance">₦0</span>
+            </div>
+          </div>
+
+          <div class="dashboard">
+            <h3>💸 Transfer Money</h3>
+            <div class="input-group">
+              <label>Send To (Username):</label>
+              <input type="text" id="transferTo" placeholder="Username">
+              <label>Amount (₦):</label>
+              <input type="number" id="transferAmount" placeholder="Amount">
+              <button class="action-button" onclick="transferMoney()">Send Money</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jobs -->
+        <div id="jobs" class="app-content">
+          <div class="dashboard">
+            <h3>💼 Available Jobs</h3>
+            <div id="jobsList"></div>
+          </div>
+        </div>
+
+        <!-- Relationships -->
+        <div id="relationships" class="app-content">
+          <div class="input-group">
+            <label>Send Relationship Request:</label>
+            <input type="text" id="relTo" placeholder="Username">
+            <button class="action-button" onclick="sendRelationshipRequest()">Send Request 💕</button>
+          </div>
+
+          <div class="dashboard">
+            <h3>💑 My Relationships</h3>
+            <div id="relationshipsList"></div>
+          </div>
+
+          <div class="dashboard">
+            <h3>💌 Requests</h3>
+            <div id="requestsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ GAME STATE ============
+    let gameState = {
+      currentPlayer: null,
+      playerId: null,
+      allPlayers: [],
+      locations: [],
+      jobs: [],
+      messages: [],
+      relationships: [],
+      socket: null,
+      currentDay: 0,
+      daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    };
+
+    const SERVER_URL = 'http://localhost:5000';
+
+    // ============ LOGIN METHOD SWITCHING ============
+
+    function switchLoginMethod(method) {
+      document.querySelectorAll('.login-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.login-tab').forEach(el => el.classList.remove('active'));
+
+      if (method === 'manual') {
+        document.getElementById('manualLogin').classList.add('active');
+        event.target.classList.add('active');
+      } else {
+        document.getElementById('googleLogin').classList.add('active');
+        event.target.classList.add('active');
+        initializeGoogleSignIn();
+      }
+    }
+
+    // ============ GOOGLE SIGN-IN ============
+
+    function initializeGoogleSignIn() {
+      if (!window.google) {
+        console.error('Google SDK not loaded yet');
+        setTimeout(initializeGoogleSignIn, 1000);
+        return;
+      }
+
+      const container = document.getElementById('googleSigninContainer');
+      if (container.innerHTML === '') {
+        google.accounts.id.initialize({
+          client_id: 'PLACEHOLDER_GOOGLE_CLIENT_ID',
+          callback: handleGoogleSignIn
+        });
+
+        google.accounts.id.renderButton(
+          container,
+          {
+            theme: 'dark',
+            size: 'large',
+            width: '300'
+          }
+        );
+      }
+    }
+
+    function handleGoogleSignIn(response) {
+      const token = response.credential;
+      
+      // Decode JWT token (without verification - for demo)
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const userData = JSON.parse(jsonPayload);
+
+      // Create character with Google info
+      createCharacterWithGoogle({
+        googleId: userData.sub,
+        googleName: userData.name,
+        googleEmail: userData.email
+      });
+    }
+
+    // ============ UI FUNCTIONS ============
+
+    function switchApp(appName) {
+      document.querySelectorAll('.app-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.app-tab').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(appName).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function showMessage(text, type = 'error') {
+      const msgEl = document.getElementById('message');
+      msgEl.innerHTML = `<div class="${type}-message">${text}</div>`;
+      msgEl.style.display = 'block';
+      setTimeout(() => {
+        msgEl.style.display = 'none';
+      }, 3000);
+    }
+
+    // ============ CHARACTER CREATION ============
+
+    async function createCharacter() {
+      const username = document.getElementById('username').value;
+      const gender = document.getElementById('gender').value;
+
+      if (!username || !gender) {
+        showMessage('Please fill all fields', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${SERVER_URL}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, gender })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          startGame(data.player);
+          showMessage('Character created! Welcome to OAU LIFE 🎉', 'success');
+        } else {
+          showMessage(data.error, 'error');
+        }
+      } catch (error) {
+        showMessage('Connection error: ' + error.message, 'error');
+      }
+    }
+
+    async function createCharacterWithGoogle(googleData) {
+      try {
+        showMessage('Creating your OAU LIFE account...', 'success');
+        
+        const response = await fetch(`${SERVER_URL}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(googleData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          startGame(data.player);
+          showMessage('Welcome to OAU LIFE, ' + data.player.username + '! 🎉', 'success');
+        } else {
+          showMessage(data.error || 'Registration failed', 'error');
+        }
+      } catch (error) {
+        showMessage('Connection error: ' + error.message, 'error');
+      }
+    }
+
+    function startGame(player) {
+      gameState.playerId = player.id;
+      gameState.currentPlayer = player;
+      localStorage.setItem('playerId', player.id);
+
+      document.getElementById('charCreation').classList.remove('active');
+      document.getElementById('appTabs').style.display = 'flex';
+      document.getElementById('dashboard').classList.add('active');
+
+      connectToGame();
+      fetchLocations();
+      fetchJobs();
+    }
+
+    // ============ API CALLS ============
+
+    async function fetchLocations() {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/locations`);
+        gameState.locations = await res.json();
+        renderLocations();
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+      }
+    }
+
+    async function fetchJobs() {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/jobs`);
+        gameState.jobs = await res.json();
+        renderJobs();
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+      }
+    }
+
+    async function fetchPlayer() {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/player/${gameState.playerId}`);
+        const player = await res.json();
+        gameState.currentPlayer = player;
+        updateUI();
+      } catch (error) {
+        console.error('Error fetching player:', error);
+      }
+    }
+
+    // ============ GAME ACTIONS ============
+
+    async function attendClass() {
+      gameState.socket.emit('attendClass', { playerId: gameState.playerId });
+    }
+
+    async function workJob(jobId) {
+      gameState.socket.emit('workJob', { playerId: gameState.playerId, jobId });
+    }
+
+    async function sendMessage() {
+      const to = document.getElementById('msgTo').value;
+      const content = document.getElementById('msgContent').value;
+
+      if (!to || !content) {
+        showMessage('Enter recipient and message', 'error');
+        return;
+      }
+
+      gameState.socket.emit('sendMessage', {
+        fromId: gameState.playerId,
+        toUsername: to,
+        content: content
+      });
+
+      document.getElementById('msgContent').value = '';
+    }
+
+    async function transferMoney() {
+      const to = document.getElementById('transferTo').value;
+      const amount = parseInt(document.getElementById('transferAmount').value);
+
+      if (!to || !amount || amount <= 0) {
+        showMessage('Enter valid recipient and amount', 'error');
+        return;
+      }
+
+      gameState.socket.emit('sendMoney', {
+        fromId: gameState.playerId,
+        toUsername: to,
+        amount: amount
+      });
+
+      document.getElementById('transferAmount').value = '';
+    }
+
+    async function moveToLocation(locationId) {
+      gameState.socket.emit('moveLocation', {
+        playerId: gameState.playerId,
+        locationId: locationId
+      });
+    }
+
+    async function sendRelationshipRequest() {
+      const to = document.getElementById('relTo').value;
+      if (!to) {
+        showMessage('Enter username', 'error');
+        return;
+      }
+
+      gameState.socket.emit('sendRelationshipRequest', {
+        fromId: gameState.playerId,
+        toUsername: to
+      });
+
+      document.getElementById('relTo').value = '';
+    }
+
+    // ============ UI RENDERING ============
+
+    function updateUI() {
+      const player = gameState.currentPlayer;
+      if (!player) return;
+
+      document.getElementById('playerName').textContent = `${player.username} (Level ${player.level})`;
+      document.getElementById('dashUsername').textContent = player.username;
+      document.getElementById('dashLevel').textContent = player.level;
+      document.getElementById('dashHostel').textContent = player.hostel;
+      document.getElementById('dashMoney').textContent = `₦${player.money.toLocaleString()}`;
+      document.getElementById('dashCGPA').textContent = player.cgpa.toFixed(2);
+      document.getElementById('dashClasses').textContent = player.classesAttended;
+
+      document.getElementById('portalLevel').textContent = player.level;
+      document.getElementById('portalCGPA').textContent = player.cgpa.toFixed(2);
+      document.getElementById('portalHostel').textContent = player.hostel;
+      document.getElementById('portalClasses').textContent = player.classesAttended;
+
+      document.getElementById('bankBalance').textContent = `₦${player.money.toLocaleString()}`;
+
+      const nepoEl = document.getElementById('nepoBadge');
+      if (player.isNepoBaby) {
+        nepoEl.innerHTML = '<div class="nepo-badge">💰 NEPO BABY - ₦500K</div>';
+      } else {
+        nepoEl.innerHTML = '<div class="nepo-badge" style="background: #888;">LAPO BABY - ₦20K</div>';
+      }
+
+      const hours = Math.floor(player.currentGameTime);
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours > 12 ? hours - 12 : hours;
+      document.getElementById('gameTime').textContent = `${displayHours}:00 ${ampm}`;
+
+      const day = (gameState.currentDay) % 7;
+      document.getElementById('dayDisplay').textContent = gameState.daysOfWeek[day];
+
+      const relList = document.getElementById('relationshipsList');
+      if (player.relationships && player.relationships.length > 0) {
+        relList.innerHTML = player.relationships.map(rel => `
+          <div class="relationship-card">
+            <div class="relationship-name">💕 ${rel.partner}</div>
+            <div style="font-size: 11px; color: #aaa;">Dating since ${new Date(rel.since).toLocaleDateString()}</div>
+          </div>
+        `).join('');
+      } else {
+        relList.innerHTML = '<p style="color: #888; font-size: 12px;">No relationships yet</p>';
+      }
+    }
+
+    function renderLocations() {
+      const grid = document.getElementById('locationGrid');
+      grid.innerHTML = gameState.locations.map(loc => `
+        <div class="location-card" onclick="moveToLocation('${loc.id}')">
+          <div class="location-name">${loc.name}</div>
+          <div style="font-size: 11px; color: #aaa;">Click to visit</div>
+        </div>
+      `).join('');
+    }
+
+    function renderJobs() {
+      const list = document.getElementById('jobsList');
+      list.innerHTML = gameState.jobs.map(job => `
+        <button class="job-button" onclick="workJob('${job.id}')">
+          ${job.name} - ₦${job.pay}/hr
+        </button>
+      `).join('');
+    }
+
+    function updateOnlinePlayers() {
+      const onlineEl = document.getElementById('onlinePlayers');
+      const online = gameState.allPlayers.filter(p => p.id !== gameState.playerId);
+      if (online.length > 0) {
+        onlineEl.innerHTML = online.map(p => `
+          <div class="online-player">👤 ${p.username} (Level ${p.level})</div>
+        `).join('');
+      } else {
+        onlineEl.innerHTML = '<p style="color: #888; font-size: 11px;">No other players online</p>';
+      }
+    }
+
+    // ============ SOCKET.IO CONNECTION ============
+
+    function connectToGame() {
+      gameState.socket = io(SERVER_URL);
+
+      gameState.socket.on('connect', () => {
+        gameState.socket.emit('joinGame', gameState.playerId);
+      });
+
+      gameState.socket.on('gameState', (data) => {
+        gameState.currentPlayer = data.player;
+        gameState.allPlayers = data.allPlayers;
+        updateUI();
+        updateOnlinePlayers();
+      });
+
+      gameState.socket.on('playerUpdated', (data) => {
+        if (data.playerId === gameState.playerId) {
+          gameState.currentPlayer.money = data.money;
+          updateUI();
+        }
+      });
+
+      gameState.socket.on('workResult', (result) => {
+        if (result.success) {
+          showMessage(result.message, 'success');
+          fetchPlayer();
+        } else {
+          showMessage(result.message, 'error');
+        }
+      });
+
+      gameState.socket.on('classResult', (result) => {
+        if (result.success) {
+          showMessage(result.message, 'success');
+          fetchPlayer();
+        } else {
+          showMessage(result.message, 'error');
+        }
+      });
+
+      gameState.socket.on('moneyResult', (result) => {
+        showMessage(result.message, result.success ? 'success' : 'error');
+        if (result.success) fetchPlayer();
+      });
+
+      gameState.socket.on('messageSent', (result) => {
+        if (result.success) {
+          showMessage('Message sent!', 'success');
+        }
+      });
+
+      gameState.socket.on('messageReceived', (msg) => {
+        gameState.messages.push(msg);
+        showMessage(`New message from ${msg.from}: ${msg.content}`, 'success');
+        renderMessages();
+      });
+
+      gameState.socket.on('playerJoined', (data) => {
+        showMessage(`${data.username} joined the campus!`, 'success');
+        updateOnlinePlayers();
+      });
+
+      gameState.socket.on('playerLeft', (data) => {
+        gameState.allPlayers = gameState.allPlayers.filter(p => p.id !== data.playerId);
+        updateOnlinePlayers();
+      });
+
+      gameState.socket.on('relationshipRequest', (request) => {
+        showMessage(`Relationship request from ${request.from} 💕`, 'success');
+        const reqList = document.getElementById('requestsList');
+        const existing = reqList.innerHTML;
+        reqList.innerHTML = existing + `
+          <div style="background: #1a1a2e; padding: 10px; margin: 8px 0; border-radius: 4px;">
+            <div style="color: #ff6b6b; font-weight: bold; margin-bottom: 5px;">${request.from}</div>
+            <button class="action-button" onclick="respondRelationship('${request.fromId}', '${request.from}', true)">Accept 💕</button>
+            <button class="action-button" style="background: #ff6b6b;" onclick="respondRelationship('${request.fromId}', '${request.from}', false)">Decline ❌</button>
+          </div>
+        `;
+      });
+    }
+
+    function respondRelationship(fromId, fromUsername, accept) {
+      gameState.socket.emit('respondRelationship', {
+        playerId: gameState.playerId,
+        fromId: fromId,
+        fromUsername: fromUsername,
+        accept: accept
+      });
+      if (accept) {
+        showMessage(`You're now dating ${fromUsername}! 💕`, 'success');
+      }
+    }
+
+    function renderMessages() {
+      const list = document.getElementById('messagesList');
+      if (gameState.messages.length === 0) {
+        list.innerHTML = '<p style="color: #888; font-size: 12px;">No messages yet</p>';
+      } else {
+        list.innerHTML = gameState.messages.map(msg => `
+          <div class="message-box">
+            <div class="message-from">${msg.from}</div>
+            <div style="color: #ddd;">${msg.content}</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // ============ INITIALIZATION ============
+
+    async function init() {
+      const storedPlayerId = localStorage.getItem('playerId');
+      if (storedPlayerId) {
+        gameState.playerId = storedPlayerId;
+        try {
+          await fetchPlayer();
+          document.getElementById('charCreation').classList.remove('active');
+          document.getElementById('appTabs').style.display = 'flex';
+          document.getElementById('dashboard').classList.add('active');
+          connectToGame();
+          await fetchLocations();
+          await fetchJobs();
+        } catch (error) {
+          localStorage.removeItem('playerId');
+        }
+      } else {
+        await fetchLocations();
+        await fetchJobs();
+      }
+    }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
